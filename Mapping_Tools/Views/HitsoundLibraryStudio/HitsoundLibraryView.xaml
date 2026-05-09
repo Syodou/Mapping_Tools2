@@ -1,0 +1,340 @@
+<UserControl x:Class="Mapping_Tools.Views.HitsoundLibraryStudio.HitsoundLibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:local="clr-namespace:Mapping_Tools.Classes.Tools.HitsoundLibraryStudio"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="1100"
+             Background="{DynamicResource MaterialDesignPaper}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         Layout principal: Toolbar arriba + tres columnas abajo
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <!-- Fila 0: Encabezado y .osu selector -->
+            <RowDefinition Height="Auto"/>
+            <!-- Fila 1: Separador -->
+            <RowDefinition Height="8"/>
+            <!-- Fila 2: Contenido principal -->
+            <RowDefinition Height="*"/>
+            <!-- Fila 3: Barra de acción inferior -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ══════════ FILA 0 – Encabezado ══════════════════════════════════ -->
+        <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,4">
+            <TextBlock Text="Hitsound Library Studio"
+                       Style="{DynamicResource MaterialDesignHeadline5TextBlock}"
+                       Margin="0,0,0,6"/>
+
+            <!-- Selector de .osu -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0"
+                         Text="{Binding BeatmapPath, UpdateSourceTrigger=PropertyChanged}"
+                         md:HintAssist.Hint="Ruta al archivo .osu del mapa de destino"
+                         Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,6,0"/>
+
+                <Button Grid.Column="1" Content="Examinar"
+                        Style="{DynamicResource MaterialDesignOutlinedButton}"
+                        Margin="0,0,6,0"
+                        Click="BrowseBeatmapButton_Click"/>
+
+                <Button Grid.Column="2" Content="Mapa actual"
+                        Style="{DynamicResource MaterialDesignOutlinedButton}"
+                        ToolTip="Usar el mapa actualmente abierto en osu!"
+                        Click="UseCurrentBeatmapButton_Click"/>
+            </Grid>
+        </StackPanel>
+
+        <Separator Grid.Row="1"/>
+
+        <!-- ══════════ FILA 2 – Contenido principal ══════════════════════════ -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <!-- Col 0: Lista de carpetas -->
+                <ColumnDefinition Width="220" MinWidth="160"/>
+                <!-- Col 1: Splitter -->
+                <ColumnDefinition Width="6"/>
+                <!-- Col 2: Lista de entradas -->
+                <ColumnDefinition Width="260" MinWidth="180"/>
+                <!-- Col 3: Splitter -->
+                <ColumnDefinition Width="6"/>
+                <!-- Col 4: Panel de edición -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ══ Columna 0: Carpetas ══════════════════════════════════════ -->
+            <DockPanel Grid.Column="0">
+                <!-- Toolbar de carpetas -->
+                <ToolBar DockPanel.Dock="Top" Style="{DynamicResource MaterialDesignToolBar}">
+                    <TextBlock Text="Carpetas" FontWeight="Bold" VerticalAlignment="Center" Margin="4,0"/>
+                    <Separator/>
+                    <Button Style="{DynamicResource MaterialDesignToolButton}"
+                            ToolTip="Nueva carpeta"
+                            Click="AddFolderButton_Click">
+                        <md:PackIcon Kind="FolderPlus"/>
+                    </Button>
+                    <Button Style="{DynamicResource MaterialDesignToolButton}"
+                            ToolTip="Eliminar carpeta seleccionada"
+                            Click="RemoveFolderButton_Click">
+                        <md:PackIcon Kind="FolderRemove"/>
+                    </Button>
+                </ToolBar>
+
+                <ListBox x:Name="FoldersList"
+                         ItemsSource="{Binding Folders}"
+                         DisplayMemberPath="DisplayName"
+                         BorderThickness="0"
+                         Background="Transparent"/>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource MaterialDesignDivider}"/>
+
+            <!-- ══ Columna 2: Entradas de sonido ════════════════════════════ -->
+            <DockPanel Grid.Column="2">
+                <ToolBar DockPanel.Dock="Top" Style="{DynamicResource MaterialDesignToolBar}">
+                    <TextBlock Text="Sonidos" FontWeight="Bold" VerticalAlignment="Center" Margin="4,0"/>
+                    <Separator/>
+                    <Button Style="{DynamicResource MaterialDesignToolButton}"
+                            ToolTip="Agregar sonido a la carpeta seleccionada"
+                            Click="AddEntryButton_Click">
+                        <md:PackIcon Kind="Plus"/>
+                    </Button>
+                    <Button Style="{DynamicResource MaterialDesignToolButton}"
+                            ToolTip="Duplicar entrada (avanza el rango automáticamente)"
+                            Click="DuplicateEntryButton_Click">
+                        <md:PackIcon Kind="ContentCopy"/>
+                    </Button>
+                    <Button Style="{DynamicResource MaterialDesignToolButton}"
+                            ToolTip="Eliminar entrada seleccionada"
+                            Click="RemoveEntryButton_Click">
+                        <md:PackIcon Kind="Delete"/>
+                    </Button>
+                </ToolBar>
+
+                <ListBox x:Name="EntriesList"
+                         ItemsSource="{Binding SelectedItem.Entries, ElementName=FoldersList}"
+                         DisplayMemberPath="DisplayName"
+                         BorderThickness="0"
+                         Background="Transparent"/>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource MaterialDesignDivider}"/>
+
+            <!-- ══ Columna 4: Panel de edición ══════════════════════════════ -->
+            <ScrollViewer Grid.Column="4" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="12"
+                            DataContext="{Binding SelectedItem, ElementName=EntriesList}">
+
+                    <!-- Placeholder si no hay entrada seleccionada -->
+                    <TextBlock Text="Selecciona un sonido de la lista para editarlo."
+                               Foreground="{DynamicResource MaterialDesignBodyLight}"
+                               HorizontalAlignment="Center" Margin="0,40">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Panel real de edición (solo visible si hay entrada seleccionada) -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
+                        <TextBlock Text="Editar Sonido"
+                                   Style="{DynamicResource MaterialDesignSubtitle1TextBlock}"
+                                   Margin="0,0,0,12"/>
+
+                        <!-- Nombre personalizado -->
+                        <TextBox Text="{Binding CustomName, UpdateSourceTrigger=PropertyChanged}"
+                                 md:HintAssist.Hint="Nombre personalizado (ej: Kick, Disparo)"
+                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                 Margin="0,0,0,12"/>
+
+                        <!-- Archivo fuente -->
+                        <TextBlock Text="Archivo de audio fuente" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding SourceFilePath, UpdateSourceTrigger=PropertyChanged}"
+                                     md:HintAssist.Hint="Ruta al .wav / .ogg / .mp3"
+                                     Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                     Margin="0,0,6,0"/>
+                            <Button Grid.Column="1" Content="..."
+                                    Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                    Click="BrowseSourceButton_Click"/>
+                        </Grid>
+
+                        <!-- Target osu! -->
+                        <TextBlock Text="Nombre en osu! (target)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding PrimaryTarget, UpdateSourceTrigger=PropertyChanged}"
+                                 md:HintAssist.Hint="ej: soft-hitwhistle12  /  drum-hitnormal"
+                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                 Margin="0,0,0,8"/>
+
+                        <TextBlock Text="• Si usas rango, el número final se reemplaza automáticamente."
+                                   FontSize="11"
+                                   Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                   Margin="0,0,0,12"/>
+
+                        <!-- Rango -->
+                        <CheckBox Content="Usar rango de números (genera múltiples archivos)"
+                                  IsChecked="{Binding UseRange}"
+                                  Margin="0,0,0,8"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding UseRange}" Value="True">
+                                            <Setter Property="IsEnabled" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding RangeStart, UpdateSourceTrigger=PropertyChanged}"
+                                     md:HintAssist.Hint="Inicio (ej: 12)"
+                                     Style="{DynamicResource MaterialDesignOutlinedTextBox}"/>
+                            <TextBlock Grid.Column="1" Text="→" VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"/>
+                            <TextBox Grid.Column="2"
+                                     Text="{Binding RangeEnd, UpdateSourceTrigger=PropertyChanged}"
+                                     md:HintAssist.Hint="Fin (ej: 20)"
+                                     Style="{DynamicResource MaterialDesignOutlinedTextBox}"/>
+                            <Button Grid.Column="3" Content="Ver targets"
+                                    Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                    Margin="8,0,0,0"
+                                    Click="PreviewTargetsButton_Click"/>
+                        </Grid>
+
+                        <!-- Volumen -->
+                        <TextBlock Text="Volumen de importación" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="50"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider Grid.Column="0"
+                                    Value="{Binding Volume}"
+                                    Minimum="0" Maximum="100" TickFrequency="5"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Volume, StringFormat={}{0}%}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <!-- Notas -->
+                        <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                                 md:HintAssist.Hint="Notas del mapper (opcional)"
+                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                 AcceptsReturn="True" MinHeight="60"
+                                 VerticalScrollBarVisibility="Auto"
+                                 Margin="0,0,0,12"/>
+
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- ══════════ FILA 3 – Barra de acciones ════════════════════════════ -->
+        <Border Grid.Row="3"
+                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                BorderThickness="0,1,0,0"
+                Padding="0,8,0,0"
+                Margin="0,8,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Opciones de exportación -->
+                <WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox Content="Sobrescribir archivos existentes"
+                              IsChecked="{Binding OverwriteExisting}"
+                              Margin="0,0,16,0"/>
+                    <CheckBox Content="Hacer backup antes de exportar"
+                              IsChecked="{Binding BackupExisting}"
+                              Margin="0,0,16,0"/>
+                    <CheckBox Content="Ignorar conflictos"
+                              IsChecked="{Binding SkipConflicts}"
+                              ToolTip="Continúa la exportación aunque haya targets duplicados o rangos superpuestos"/>
+                </WrapPanel>
+
+                <!-- Botones principales -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Verificar Conflictos"
+                            Style="{DynamicResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,8,0"
+                            Click="CheckConflictsButton_Click">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="AlertCircleOutline" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+
+                    <Button Content="Exportar al Mapa"
+                            Style="{DynamicResource MaterialDesignRaisedButton}"
+                            md:ButtonAssist.CornerRadius="4"
+                            Click="ExportButton_Click">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="Export" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
